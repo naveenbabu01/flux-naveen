@@ -1,0 +1,3 @@
+creation_rules:
+  - path_regex: .*-secret\.yaml$
+    azure_keyvault: https://midodevops-test.vault.azure.net/keys/sops-terraform/cd171914eac24937b3877c6196457ce2
