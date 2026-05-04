@@ -54,7 +54,9 @@ jobs:
 
       - name: Get AKS credentials
         run: |
+          sudo az aks install-cli
           az aks get-credentials --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AKS_CLUSTER }} --admin --overwrite-existing
+          kubectl get nodes
 
       - name: Create namespace
         run: kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
