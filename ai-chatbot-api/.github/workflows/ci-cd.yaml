@@ -1,0 +1,75 @@
+name: AI Chatbot API - Build & Deploy to AKS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ai-chatbot-api/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "ai-chatbot-api/**"
+
+env:
+  ACR_NAME: pythonacrtest          # e.g., myacr
+  IMAGE_NAME: ai-chatbot-api
+  RESOURCE_GROUP: rg-test
+  AKS_CLUSTER: aks-test
+  NAMESPACE: ai-chatbot
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to ACR
+        run: az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build and push Docker image
+        run: |
+          cd ai-chatbot-api/src
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AKS_CLUSTER }}
+
+      - name: Create namespace
+        run: kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create Azure OpenAI secret
+        run: |
+          kubectl create secret generic azure-openai-secret \
+            --namespace ${{ env.NAMESPACE }} \
+            --from-literal=api-key=${{ secrets.AZURE_OPENAI_API_KEY }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install ai-chatbot-api ai-chatbot-api/helm-chart \
+            --namespace ${{ env.NAMESPACE }} \
+            --set image.repository=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ github.sha }} \
+            --set env.AZURE_OPENAI_ENDPOINT=${{ secrets.AZURE_OPENAI_ENDPOINT }} \
+            --set env.AZURE_OPENAI_DEPLOYMENT_NAME=${{ secrets.AZURE_OPENAI_DEPLOYMENT_NAME }}

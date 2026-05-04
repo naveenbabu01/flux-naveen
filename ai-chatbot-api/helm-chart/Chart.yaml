@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ai-chatbot-api
+description: AI Chatbot API powered by Azure OpenAI
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

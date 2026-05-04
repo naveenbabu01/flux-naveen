@@ -1,0 +1,31 @@
+replicaCount: 2
+
+image:
+  repository: pythonacrtest.azurecr.io/ai-chatbot-api
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+ingress:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Azure OpenAI settings (override via --set or secret)
+env:
+  AZURE_OPENAI_ENDPOINT: ""
+  AZURE_OPENAI_DEPLOYMENT_NAME: "gpt-4.1"
+  AZURE_OPENAI_API_VERSION: "2024-02-01"
+
+# Reference to Kubernetes secret for API key
+secretName: azure-openai-secret
