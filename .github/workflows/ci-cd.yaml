@@ -53,14 +53,16 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Install kubelogin
-        uses: azure/use-kubelogin@v1
-        with:
-          kubelogin-version: 'v0.1.3'
+        run: |
+          curl -LO https://github.com/Azure/kubelogin/releases/download/v0.1.3/kubelogin-linux-amd64.zip
+          unzip kubelogin-linux-amd64.zip -d kubelogin
+          sudo mv kubelogin/bin/linux_amd64/kubelogin /usr/local/bin/
+          kubelogin --version
 
       - name: Get AKS credentials
         run: |
           az aks get-credentials --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AKS_CLUSTER }}
-          kubelogin convert-kubeconfig -l azurecli
+          kubelogin convert-kubeconfig -l spn --client-id ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }} --client-secret ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }} --tenant-id ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
 
       - name: Create namespace
         run: kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
