@@ -1,0 +1,24 @@
+replicaCount: 1
+
+image:
+  repository: pythonacrtest.azurecr.io/ai-devops-assistant
+  tag: "v1"
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+env:
+  AZURE_OPENAI_ENDPOINT: "https://test-ai-poc-nav.openai.azure.com/"
+  AZURE_OPENAI_DEPLOYMENT: "gpt-4.1"
+  AZURE_OPENAI_API_VERSION: "2024-02-15-preview"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

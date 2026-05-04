@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI DevOps Incident Assistant</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',sans-serif;background:#0a0a1a;color:#e0e0e0;min-height:100vh}
+        .header{background:linear-gradient(135deg,#ff6b35,#f7c948);padding:18px 32px;display:flex;align-items:center;gap:12px}
+        .header h1{font-size:20px;color:#000}.header .logo{font-size:28px}
+        .header .badge{background:rgba(0,0,0,0.2);padding:4px 12px;border-radius:12px;font-size:11px;margin-left:auto;color:#000}
+        .container{max-width:950px;margin:24px auto;padding:0 20px}
+        .card{background:#111;border:1px solid #222;border-radius:12px;padding:24px;margin-bottom:20px}
+        .card h2{font-size:16px;color:#f7c948;margin-bottom:14px}
+        textarea{width:100%;height:180px;background:#0a0a1a;border:1px solid #333;border-radius:8px;color:#e0e0e0;padding:14px;font-family:'Consolas',monospace;font-size:13px;resize:vertical;outline:none}
+        textarea:focus{border-color:#ff6b35}
+        .row{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;align-items:center}
+        input[type=text]{padding:10px 14px;background:#0a0a1a;border:1px solid #333;border-radius:8px;color:#e0e0e0;font-size:13px;outline:none;width:200px}
+        .btn{padding:12px 28px;background:linear-gradient(135deg,#ff6b35,#f7c948);color:#000;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;transition:opacity .2s}
+        .btn:hover{opacity:.9}.btn:disabled{opacity:.5;cursor:not-allowed}
+        .samples{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+        .sample{background:#1a1a2e;border:1px solid #333;padding:8px 14px;border-radius:20px;font-size:12px;cursor:pointer;transition:all .2s}
+        .sample:hover{border-color:#ff6b35;background:#2a1a0e}
+        .loading{text-align:center;padding:40px;display:none}
+        .spinner{width:40px;height:40px;border:3px solid #333;border-top:3px solid #ff6b35;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .result{display:none;animation:fadeIn .4s}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        .severity-badge{display:inline-block;padding:6px 16px;border-radius:20px;font-weight:700;font-size:14px;margin-right:8px}
+        .sev-HIGH{background:#f4433630;color:#f44336;border:1px solid #f44336}
+        .sev-MEDIUM{background:#ff980030;color:#ff9800;border:1px solid #ff9800}
+        .sev-LOW{background:#4caf5030;color:#4caf50;border:1px solid #4caf50}
+        .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
+        .stat{background:#0a0a1a;border:1px solid #333;border-radius:10px;padding:14px;text-align:center}
+        .stat .val{font-size:20px;font-weight:700;color:#f7c948}.stat .lbl{font-size:11px;color:#888;margin-top:4px}
+        .section{margin:16px 0}.section h3{color:#ff6b35;font-size:14px;margin-bottom:8px}
+        .step{background:#0a0a1a;border-left:3px solid #ff6b35;padding:10px 14px;margin:6px 0;border-radius:0 8px 8px 0;font-size:13px}
+        pre{background:#0a0a1a;border:1px solid #333;padding:14px;border-radius:8px;overflow-x:auto;margin:8px 0}
+        code{font-family:'Consolas',monospace;font-size:13px}
+        .copy-btn{background:#ff6b3520;color:#ff6b35;border:1px solid #ff6b35;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;float:right}
+        .copy-btn:hover{background:#ff6b3540}
+        .footer{text-align:center;padding:16px;font-size:11px;color:#444}
+    </style>
+</head>
+<body>
+<div class="header">
+    <span class="logo">🤖</span>
+    <h1>AI DevOps Incident Assistant</h1>
+    <span class="badge">Azure OpenAI GPT-4.1 • AKS</span>
+</div>
+<div class="container">
+    <div class="card">
+        <h2>📋 Paste Pipeline Failure Logs</h2>
+        <textarea id="logs" placeholder="Paste your CI/CD pipeline failure logs here...&#10;&#10;Example:&#10;Error: ImagePullBackOff for image myapp:latest&#10;Failed to pull image: unauthorized: authentication required&#10;&#10;Or paste GitHub Actions / Jenkins / Azure DevOps logs..."></textarea>
+        <div class="row">
+            <input type="text" id="pipeline" placeholder="Pipeline name">
+            <input type="text" id="buildId" placeholder="Build ID">
+            <button class="btn" id="analyzeBtn" onclick="analyze()">🔬 Analyze Failure</button>
+            <button class="btn" style="background:linear-gradient(135deg,#1a73e8,#00bcd4)" onclick="analyzeGH()">📝 GitHub Format</button>
+        </div>
+        <div class="samples">
+            <span style="font-size:12px;color:#888">Try:</span>
+            <div class="sample" onclick="setLog('Error: ImagePullBackOff for container myapp. Failed to pull image pythonacrtest.azurecr.io/myapp:v5. unauthorized: authentication required')">🔴 ImagePullBackOff</div>
+            <div class="sample" onclick="setLog('FATAL ERROR: CALL_AND_RETRY_LAST Allocation failed - JavaScript heap out of memory\nnpm ERR! code ELIFECYCLE\nnpm ERR! errno 134')">🔴 OOM in Build</div>
+            <div class="sample" onclick="setLog('Error from server (Forbidden): deployments.apps is forbidden: User system:serviceaccount:default:default cannot create resource deployments in API group apps in the namespace production')">🔴 RBAC Error</div>
+            <div class="sample" onclick="setLog('helm upgrade --install failed: timed out waiting for the condition\nError: UPGRADE FAILED: timed out waiting for the condition')">🟡 Helm Timeout</div>
+            <div class="sample" onclick="setLog('Error: failed to build: exit status 1\n#8 ERROR: failed to solve: python:3.11-slim: failed to resolve source metadata: unexpected status from HEAD request: 429 Too Many Requests')">🟡 Docker Build Fail</div>
+            <div class="sample" onclick="setLog('FAILED tests/test_api.py::test_create_user - AssertionError: assert 500 == 201\nFAILED tests/test_api.py::test_login - ConnectionRefusedError: [Errno 111] Connection refused\n2 failed, 15 passed in 8.23s')">🟡 Test Failures</div>
+        </div>
+    </div>
+    <div class="loading" id="loading"><div class="spinner"></div><p>🔬 AI is analyzing the failure...</p></div>
+    <div class="card result" id="result">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+            <span style="font-size:24px">📊</span>
+            <h2 style="margin:0">AI Incident Analysis</h2>
+        </div>
+        <div class="stat-grid" id="stats"></div>
+        <div class="section"><h3>🔍 Root Cause</h3><div id="rootCause" style="padding:10px;background:#0a0a1a;border-radius:8px"></div></div>
+        <div class="section"><h3>🛠️ Fix Steps</h3><div id="fixSteps"></div></div>
+        <div class="section" id="cmdSection"><h3>💻 Commands <button class="copy-btn" onclick="copyCommands()">📋 Copy All</button></h3><pre><code id="commands"></code></pre></div>
+        <div class="section"><h3>🛡️ Prevention</h3><div id="prevention" style="padding:10px;background:#0a0a1a;border-radius:8px"></div></div>
+    </div>
+    <div class="card result" id="ghResult" style="display:none">
+        <h2>📝 GitHub PR Comment Preview</h2>
+        <pre style="white-space:pre-wrap;max-height:400px;overflow-y:auto"><code id="ghMarkdown"></code></pre>
+        <button class="btn" style="margin-top:12px" onclick="copyGH()">📋 Copy Markdown</button>
+    </div>
+</div>
+<div class="footer">AI DevOps Incident Assistant • Azure OpenAI GPT-4.1 • AKS • FastAPI</div>
+<script>
+let lastAnalysis=null, lastGH=null;
+function setLog(t){document.getElementById('logs').value=t}
+async function analyze(){
+    const logs=document.getElementById('logs').value.trim();
+    if(!logs){alert('Paste failure logs first');return}
+    const btn=document.getElementById('analyzeBtn');
+    btn.disabled=true;
+    document.getElementById('loading').style.display='block';
+    document.getElementById('result').style.display='none';
+    document.getElementById('ghResult').style.display='none';
+    try{
+        const res=await fetch('/analyze',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({logs,pipeline_name:document.getElementById('pipeline').value||'manual',
+            build_id:document.getElementById('buildId').value||'0'})});
+        const d=await res.json();lastAnalysis=d;
+        document.getElementById('loading').style.display='none';
+        if(res.ok)showResult(d);else alert('Error: '+(d.detail||'Failed'));
+    }catch(e){document.getElementById('loading').style.display='none';alert('Error: '+e.message)}
+    btn.disabled=false;
+}
+async function analyzeGH(){
+    const logs=document.getElementById('logs').value.trim();
+    if(!logs){alert('Paste failure logs first');return}
+    document.getElementById('loading').style.display='block';
+    document.getElementById('ghResult').style.display='none';
+    try{
+        const res=await fetch('/analyze/github-format',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({logs,pipeline_name:document.getElementById('pipeline').value||'manual',
+            build_id:document.getElementById('buildId').value||'0'})});
+        const d=await res.json();lastGH=d.markdown;
+        document.getElementById('loading').style.display='none';
+        document.getElementById('ghMarkdown').textContent=d.markdown;
+        document.getElementById('ghResult').style.display='block';
+        showResult(d.analysis);
+    }catch(e){document.getElementById('loading').style.display='none';alert('Error: '+e.message)}
+}
+function showResult(d){
+    const sev=d.severity||'MEDIUM';
+    document.getElementById('stats').innerHTML=`
+        <div class="stat"><div class="val"><span class="severity-badge sev-${sev}">${sev}</span></div><div class="lbl">Severity</div></div>
+        <div class="stat"><div class="val">${d.category||'?'}</div><div class="lbl">Category</div></div>
+        <div class="stat"><div class="val">${d.estimated_fix_time||'?'}</div><div class="lbl">Est. Fix Time</div></div>
+        <div class="stat"><div class="val">${(d.confidence*100||0).toFixed(0)}%</div><div class="lbl">Confidence</div></div>`;
+    document.getElementById('rootCause').textContent=d.root_cause||'Unknown';
+    const steps=d.fix_steps||[];
+    document.getElementById('fixSteps').innerHTML=steps.map((s,i)=>`<div class="step"><strong>${i+1}.</strong> ${s}</div>`).join('');
+    const cmds=d.commands||[];
+    if(cmds.length){document.getElementById('cmdSection').style.display='block';document.getElementById('commands').textContent=cmds.join('\n')}
+    else{document.getElementById('cmdSection').style.display='none'}
+    document.getElementById('prevention').textContent=d.prevention||'N/A';
+    document.getElementById('result').style.display='block';
+}
+function copyCommands(){const t=document.getElementById('commands').textContent;navigator.clipboard.writeText(t);alert('Commands copied!')}
+function copyGH(){navigator.clipboard.writeText(lastGH);alert('Markdown copied!')}
+</script>
+</body>
+</html>

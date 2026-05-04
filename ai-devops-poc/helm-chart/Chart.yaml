@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ai-devops-assistant
+description: AI-Powered DevOps Incident Assistant
+version: 0.1.0
+appVersion: "1.0.0"
+type: application

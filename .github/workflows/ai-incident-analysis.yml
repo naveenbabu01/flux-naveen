@@ -1,0 +1,50 @@
+name: AI Incident Analysis on Failure
+
+on:
+  workflow_run:
+    workflows: ["AI DevOps Assistant CI/CD"]
+    types: [completed]
+
+jobs:
+  analyze-failure:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install openai==1.37.0 httpx==0.27.0 requests
+
+      - name: Download workflow logs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID=${{ github.event.workflow_run.id }}
+          gh api repos/${{ github.repository }}/actions/runs/${RUN_ID}/logs > /tmp/logs.zip || true
+          if [ -f /tmp/logs.zip ]; then
+            unzip -o /tmp/logs.zip -d /tmp/logs/ || true
+            cat /tmp/logs/*.txt > /tmp/full_logs.txt 2>/dev/null || echo "Log download failed" > /tmp/full_logs.txt
+          else
+            echo "Could not download logs for run ${RUN_ID}" > /tmp/full_logs.txt
+          fi
+
+      - name: Analyze failure with AI
+        env:
+          AZURE_OPENAI_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_ENDPOINT: https://test-ai-poc-nav.openai.azure.com/
+          AZURE_OPENAI_DEPLOYMENT: gpt-4.1
+        run: |
+          python ai-devops-poc/scripts/analyze_failure.py /tmp/full_logs.txt > /tmp/analysis.md
+
+      - name: Post analysis as issue comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="🤖 AI Incident Analysis - Run #${{ github.event.workflow_run.run_number }}"
+          BODY=$(cat /tmp/analysis.md)
+          gh issue create --repo ${{ github.repository }} --title "${TITLE}" --body "${BODY}" --label "ai-analysis,incident"

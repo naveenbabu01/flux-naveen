@@ -1,0 +1,54 @@
+name: AI DevOps Assistant CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths: ['ai-devops-poc/**']
+  workflow_dispatch:
+
+env:
+  ACR_NAME: pythonacrtest
+  IMAGE_NAME: ai-devops-assistant
+  AKS_CLUSTER: aks-test
+  RESOURCE_GROUP: rg-test
+  NAMESPACE: ai-devops-assistant
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build & Push to ACR
+        run: |
+          az acr build --registry ${{ env.ACR_NAME }} \
+            --image ${{ env.IMAGE_NAME }}:${{ github.run_number }} \
+            --image ${{ env.IMAGE_NAME }}:latest \
+            ai-devops-poc/src/
+
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AKS_CLUSTER }} --overwrite-existing
+
+      - name: Create Namespace
+        run: kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create Secret
+        run: |
+          kubectl create secret generic ai-devops-assistant-secret \
+            --namespace ${{ env.NAMESPACE }} \
+            --from-literal=AZURE_OPENAI_KEY=${{ secrets.AZURE_OPENAI_API_KEY }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install ai-devops-assistant ai-devops-poc/helm-chart/ \
+            --namespace ${{ env.NAMESPACE }} \
+            --set image.tag=${{ github.run_number }} \
+            --wait --timeout 120s
