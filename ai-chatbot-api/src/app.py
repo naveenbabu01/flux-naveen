@@ -1,9 +1,14 @@
 import os
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from openai import AzureOpenAI
 
 app = FastAPI(title="AI Chatbot API", version="1.0.0")
+
+# Serve static files (Chat UI)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Azure OpenAI Configuration (set via environment variables)
 client = AzureOpenAI(
@@ -29,6 +34,11 @@ class ChatResponse(BaseModel):
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
+
+@app.get("/", include_in_schema=False)
+def serve_chat_ui():
+    return FileResponse("static/index.html")
 
 
 @app.post("/chat", response_model=ChatResponse)
