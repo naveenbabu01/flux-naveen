@@ -1,15 +1,22 @@
-import os
+import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 from ai_assistant import AIIncidentAssistant
+from monitor import PodMonitor
 
-app = FastAPI(title="AI DevOps Incident Assistant", version="1.0.0")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI(title="AI DevOps Incident Assistant", version="2.0.0")
 
 assistant = AIIncidentAssistant()
+
+# Start real-time pod monitor
+monitor = PodMonitor()
+monitor.start()
 
 
 class AnalyzeRequest(BaseModel):
@@ -18,25 +25,37 @@ class AnalyzeRequest(BaseModel):
     build_id: Optional[str] = "0"
 
 
-class AnalyzeResponse(BaseModel):
-    severity: str
-    root_cause: str
-    category: str
-    fix_steps: list
-    commands: list
-    prevention: str
-    estimated_fix_time: str
-    confidence: float
-
-
 @app.get("/health")
 def health():
-    return {"status": "healthy", "service": "ai-devops-assistant"}
+    return {
+        "status": "healthy",
+        "service": "ai-devops-incident-assistant",
+        "version": "2.0.0",
+        "monitoring": monitor.monitoring,
+        "incidents_count": len(monitor.incidents),
+    }
 
 
 @app.get("/", include_in_schema=False)
 def ui():
     return FileResponse("static/index.html")
+
+
+@app.get("/incidents")
+def get_incidents():
+    """Get all auto-detected incidents with AI analysis."""
+    return {"incidents": monitor.get_incidents()}
+
+
+@app.post("/scan")
+def scan_now():
+    """Trigger immediate scan of all pods across all namespaces."""
+    new_incidents = monitor.scan_all_pods()
+    return {
+        "message": f"Scan complete. Found {len(new_incidents)} new failing pods.",
+        "new_incidents": [i.to_dict() for i in new_incidents],
+        "total_incidents": len(monitor.incidents),
+    }
 
 
 @app.post("/analyze")
@@ -66,6 +85,8 @@ def analyze_github(request: AnalyzeRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 if __name__ == "__main__":
     import uvicorn
