@@ -52,24 +52,25 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Get AKS credentials
+      - name: Install kubelogin
         run: |
           sudo az aks install-cli
+          which kubelogin
+          kubelogin --version
+          echo "$(dirname $(which kubelogin))" >> $GITHUB_PATH
+
+      - name: Get AKS credentials
+        run: |
           az aks get-credentials --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AKS_CLUSTER }} --admin --overwrite-existing
           kubectl get nodes
 
-      - name: Create namespace
-        run: kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
-
-      - name: Create Azure OpenAI secret
+      - name: Deploy to AKS
         run: |
+          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
           kubectl create secret generic azure-openai-secret \
             --namespace ${{ env.NAMESPACE }} \
             --from-literal=api-key=${{ secrets.AZURE_OPENAI_API_KEY }} \
             --dry-run=client -o yaml | kubectl apply -f -
-
-      - name: Deploy with Helm
-        run: |
           helm upgrade --install ai-chatbot-api ai-chatbot-api/helm-chart \
             --namespace ${{ env.NAMESPACE }} \
             --set image.repository=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }} \
