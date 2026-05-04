@@ -23,7 +23,7 @@ resources:
 
 # Azure OpenAI settings (override via --set or secret)
 env:
-  AZURE_OPENAI_ENDPOINT: ""
+  AZURE_OPENAI_ENDPOINT: "https://test-ai-poc-nav.openai.azure.com/"
   AZURE_OPENAI_DEPLOYMENT_NAME: "gpt-4.1"
   AZURE_OPENAI_API_VERSION: "2024-02-01"
 
