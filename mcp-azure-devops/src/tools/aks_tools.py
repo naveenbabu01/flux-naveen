@@ -38,12 +38,21 @@ class AKSTools:
             logger.error(f"Azure client init failed: {e}")
 
     def _ensure_k8s_config(self):
-        """Load kubeconfig from AKS cluster credentials (runs once)."""
+        """Load kubeconfig — prefer local ~/.kube/config (admin), fall back to AKS API."""
         if self._k8s_ready:
             return
+        # Try local kubeconfig first (works with `az aks get-credentials --admin`)
         try:
-            # Fetch kubeconfig from AKS API
-            creds = self.aks_client.managed_clusters.list_cluster_user_credentials(
+            k8s_config.load_kube_config()
+            self._k8s_ready = True
+            logger.info("Kubeconfig loaded from local ~/.kube/config")
+            return
+        except Exception as e:
+            logger.info(f"Local kubeconfig not available ({e}), trying AKS API...")
+
+        # Fall back to fetching admin credentials from AKS API
+        try:
+            creds = self.aks_client.managed_clusters.list_cluster_admin_credentials(
                 resource_group_name=self.cfg.aks_resource_group,
                 resource_name=self.cfg.aks_cluster_name,
             )
@@ -56,14 +65,9 @@ class AKSTools:
             k8s_config.load_kube_config(config_file=tmp.name)
             os.unlink(tmp.name)
             self._k8s_ready = True
-            logger.info(f"Kubeconfig loaded for cluster: {self.cfg.aks_cluster_name}")
+            logger.info(f"Kubeconfig loaded via AKS admin credentials: {self.cfg.aks_cluster_name}")
         except Exception as e:
-            logger.warning(f"Could not load AKS kubeconfig ({e}) — trying local kubeconfig")
-            try:
-                k8s_config.load_kube_config()   # fallback to ~/.kube/config
-                self._k8s_ready = True
-            except Exception as e2:
-                logger.error(f"Kubeconfig load failed: {e2}")
+            logger.error(f"Kubeconfig load failed: {e}")
 
     # ── get_pod_status ──────────────────────────────────────────────────────
 
