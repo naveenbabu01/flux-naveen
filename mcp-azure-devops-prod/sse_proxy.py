@@ -1,59 +1,58 @@
 #!/usr/bin/env python3
 """
-MCP SSE Proxy — Bridges stdio (Claude Desktop) to HTTP/SSE (AKS MCP Server).
-Claude Desktop spawns this script locally, and it forwards all MCP traffic
-to the remote server running on AKS.
+MCP SSE Proxy — Bridges stdio (Claude Desktop) ↔ HTTP/SSE (AKS MCP Server).
+
+This uses the official MCP SDK's SSE client transport to connect to the
+remote MCP server, while exposing a stdio interface to Claude Desktop.
+
+Usage in claude_desktop_config.json:
+{
+  "mcpServers": {
+    "azure-devops-prod": {
+      "command": "python",
+      "args": ["C:/Git_Reops/flux-naveen-1/mcp-azure-devops-prod/sse_proxy.py"]
+    }
+  }
+}
 """
 
 import asyncio
-import sys
-import json
-import httpx
+from mcp.client.session import ClientSession
+from mcp.client.sse import sse_client
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import Tool, TextContent
+
+# Remote MCP server on AKS
+REMOTE_SSE_URL = "http://48.206.129.154/sse"
+
+# Local proxy server (stdio for Claude Desktop)
+proxy = Server("mcp-sse-proxy")
 
 
-MCP_SERVER_URL = "http://48.206.129.154"
+@proxy.list_tools()
+async def list_tools() -> list[Tool]:
+    """Fetch tool list from remote AKS MCP server."""
+    async with sse_client(REMOTE_SSE_URL) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.list_tools()
+            return result.tools
 
 
-async def forward_to_server(request: dict) -> dict:
-    """Send a JSON-RPC request to the remote MCP server and return the response."""
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(
-            f"{MCP_SERVER_URL}/messages/",
-            json=request,
-            headers={"Content-Type": "application/json"},
-        )
-        resp.raise_for_status()
-        return resp.json()
+@proxy.call_tool()
+async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    """Forward tool call to remote AKS MCP server."""
+    async with sse_client(REMOTE_SSE_URL) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.call_tool(name, arguments)
+            return result.content
 
 
 async def main():
-    """Read JSON-RPC from stdin, forward to AKS server, write response to stdout."""
-    reader = asyncio.StreamReader()
-    protocol = asyncio.StreamReaderProtocol(reader)
-    await asyncio.get_event_loop().connect_read_pipe(lambda: protocol, sys.stdin.buffer)
-
-    while True:
-        line = await reader.readline()
-        if not line:
-            break
-
-        line = line.decode().strip()
-        if not line:
-            continue
-
-        try:
-            request = json.loads(line)
-            response = await forward_to_server(request)
-            sys.stdout.write(json.dumps(response) + "\n")
-            sys.stdout.flush()
-        except Exception as e:
-            error_response = {
-                "jsonrpc": "2.0",
-                "error": {"code": -32000, "message": str(e)},
-                "id": request.get("id") if 'request' in dir() else None,
-            }
-            sys.stdout.write(json.dumps(error_response) + "\n")
-            sys.stdout.flush()
+    async with stdio_server() as (read_stream, write_stream):
+        await proxy.run(read_stream, write_stream, proxy.create_initialization_options())
 
 
 if __name__ == "__main__":
