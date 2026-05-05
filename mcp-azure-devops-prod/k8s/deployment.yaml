@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-server
+  namespace: mcp-server
+  labels:
+    app: mcp-azure-devops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mcp-azure-devops
+  template:
+    metadata:
+      labels:
+        app: mcp-azure-devops
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: mcp-server-sa
+      containers:
+        - name: mcp-server
+          image: pythonacrtest.azurecr.io/mcp-server-prod:latest
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: mcp-server-config
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      restartPolicy: Always

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mcp-server
+  labels:
+    app: mcp-azure-devops
+    environment: production

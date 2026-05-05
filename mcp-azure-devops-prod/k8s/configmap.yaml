@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mcp-server-config
+  namespace: mcp-server
+data:
+  AZURE_SUBSCRIPTION_ID: "9f6136f9-c8b1-414d-9a23-a40c0023225e"
+  AZURE_TENANT_ID: "d6df76dd-f7d2-438a-9d44-6e33a0d648e9"
+  AKS_RESOURCE_GROUP: "rg-test"
+  AKS_CLUSTER_NAME: "aks-test"
+  KEY_VAULT_NAME: "midodevops-test"
+  TRANSPORT: "http"
+  PORT: "8000"
+  GITHUB_API_URL: "https://api.github.com"
+  JIRA_URL: "https://naveenmcp.atlassian.net"
+  JIRA_EMAIL: "mummadinaveen777@gmail.com"
+  JIRA_DEFAULT_PROJECT: "SUP"
