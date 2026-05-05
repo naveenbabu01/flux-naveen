@@ -1,0 +1,6 @@
+apiVersion: v2
+name: k8s-troubleshooter
+description: Kubernetes Troubleshooter Bot powered by Azure OpenAI
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

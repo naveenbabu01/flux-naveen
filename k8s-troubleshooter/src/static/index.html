@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K8s Troubleshooter - AI Powered</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a73e8, #00bcd4);
+            padding: 20px 32px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header .logo { font-size: 32px; }
+        .header h1 { font-size: 22px; }
+        .header .badge {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-left: auto;
+        }
+        .container {
+            max-width: 900px;
+            margin: 24px auto;
+            padding: 0 20px;
+        }
+        /* Error Input Section */
+        .input-section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .input-section h2 { font-size: 16px; margin-bottom: 16px; color: #58a6ff; }
+        .input-section textarea {
+            width: 100%;
+            height: 140px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            color: #e6edf3;
+            padding: 14px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+            outline: none;
+        }
+        .input-section textarea:focus { border-color: #1a73e8; }
+        .input-section textarea::placeholder { color: #555; }
+        .options {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .options input {
+            padding: 10px 14px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            color: #e6edf3;
+            font-size: 13px;
+            outline: none;
+            width: 180px;
+        }
+        .options input:focus { border-color: #1a73e8; }
+        .btn-diagnose {
+            padding: 12px 28px;
+            background: linear-gradient(135deg, #1a73e8, #00bcd4);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin-left: auto;
+            transition: opacity 0.2s;
+        }
+        .btn-diagnose:hover { opacity: 0.9; }
+        .btn-diagnose:disabled { opacity: 0.5; cursor: not-allowed; }
+        /* Common Errors */
+        .common-errors {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .error-chip {
+            background: #1c2333;
+            border: 1px solid #30363d;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .error-chip:hover { background: #1a365d; border-color: #1a73e8; }
+        .error-chip .icon { margin-right: 4px; }
+        /* Result Section */
+        .result-section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #30363d;
+        }
+        .result-header h2 { font-size: 16px; color: #58a6ff; }
+        .result-content {
+            line-height: 1.7;
+            font-size: 14px;
+        }
+        .result-content h1, .result-content h2, .result-content h3 {
+            color: #58a6ff;
+            margin: 16px 0 8px 0;
+        }
+        .result-content h1 { font-size: 18px; }
+        .result-content h2 { font-size: 16px; }
+        .result-content h3 { font-size: 14px; }
+        .result-content pre {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 14px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 10px 0;
+            position: relative;
+        }
+        .result-content code {
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+        }
+        .result-content p code {
+            background: #1c2333;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .result-content ul, .result-content ol {
+            margin-left: 20px;
+            margin-bottom: 8px;
+        }
+        .result-content strong { color: #f0883e; }
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid #30363d;
+            border-top: 3px solid #1a73e8;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 11px;
+            color: #484f58;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <span class="logo">⚕️</span>
+    <h1>K8s Troubleshooter</h1>
+    <span class="badge">Powered by Azure OpenAI GPT-4.1</span>
+</div>
+
+<div class="container">
+    <!-- LIVE CLUSTER SCAN -->
+    <div class="input-section" style="border-color:#1a73e8; margin-bottom:16px;">
+        <h2>🛡️ Live Cluster Scan — Auto-detect issues in your AKS cluster</h2>
+        <div style="display:flex; gap:12px; margin-top:12px; align-items:center; flex-wrap:wrap;">
+            <button class="btn-diagnose" style="margin-left:0; background:linear-gradient(135deg,#e53935,#ff7043);" onclick="scanCluster()">🔴 Scan Entire Cluster</button>
+            <input type="text" id="scanNamespace" placeholder="Or scan specific namespace..." style="padding:10px 14px; background:#0d1117; border:1px solid #30363d; border-radius:8px; color:#e6edf3; font-size:13px; width:220px; outline:none;">
+            <button class="btn-diagnose" style="margin-left:0;" onclick="scanNs()">🔍 Scan Namespace</button>
+        </div>
+        <p style="font-size:11px; color:#555; margin-top:8px;">Reads live pod status, detects CrashLoopBackOff, OOMKilled, Pending, ImagePullBackOff and more</p>
+    </div>
+
+    <!-- SCAN RESULT -->
+    <div class="result-section" id="scanResult" style="margin-bottom:16px;">
+        <div class="result-header">
+            <span style="font-size:20px;">🛡️</span>
+            <h2>Cluster Scan Result</h2>
+        </div>
+        <div id="scanStats" style="display:flex; gap:16px; margin-bottom:16px; flex-wrap:wrap;"></div>
+        <div id="scanIssues"></div>
+        <div class="result-content" id="scanDiagnosis"></div>
+    </div>
+
+    <div class="input-section">
+        <h2>🔍 Paste your Kubernetes error or describe the issue</h2>
+        <textarea id="errorInput" placeholder="Paste your error here, e.g.:&#10;&#10;CrashLoopBackOff: back-off 5m0s restarting failed container&#10;&#10;OR describe the issue:&#10;&#10;My pods are stuck in Pending state and not getting scheduled"></textarea>
+        <div class="options">
+            <input type="text" id="namespace" placeholder="Namespace (optional)">
+            <input type="text" id="resourceName" placeholder="Pod/Deploy name (optional)">
+            <button class="btn-diagnose" id="diagnoseBtn" onclick="diagnose()">🔬 Diagnose</button>
+        </div>
+        <div class="common-errors">
+            <span style="font-size:12px; color:#888; margin-right:4px;">Common errors:</span>
+            <div class="error-chip" onclick="setError('CrashLoopBackOff')"><span class="icon">🔴</span>CrashLoopBackOff</div>
+            <div class="error-chip" onclick="setError('ImagePullBackOff')"><span class="icon">🔴</span>ImagePullBackOff</div>
+            <div class="error-chip" onclick="setError('Pods stuck in Pending state')"><span class="icon">🟡</span>Pending Pods</div>
+            <div class="error-chip" onclick="setError('OOMKilled - container exceeded memory limit')"><span class="icon">🔴</span>OOMKilled</div>
+            <div class="error-chip" onclick="setError('CreateContainerConfigError')"><span class="icon">🟡</span>ConfigError</div>
+            <div class="error-chip" onclick="setError('Node NotReady')"><span class="icon">🔴</span>Node NotReady</div>
+            <div class="error-chip" onclick="setError('Service has no endpoints')"><span class="icon">🟡</span>No Endpoints</div>
+            <div class="error-chip" onclick="setError('PersistentVolumeClaim stuck in Pending')"><span class="icon">🟡</span>PVC Pending</div>
+            <div class="error-chip" onclick="setError('Readiness probe failed: connection refused')"><span class="icon">🟡</span>Probe Failed</div>
+            <div class="error-chip" onclick="setError('Error from server (Forbidden): pods is forbidden')"><span class="icon">🔴</span>RBAC Forbidden</div>
+        </div>
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>🔬 Analyzing error and generating diagnosis...</p>
+        <p style="font-size:12px; color:#555; margin-top:8px;">This may take a few seconds</p>
+    </div>
+
+    <div class="result-section" id="result">
+        <div class="result-header">
+            <span style="font-size:20px;">📋</span>
+            <h2>Diagnosis Result</h2>
+        </div>
+        <div class="result-content" id="resultContent"></div>
+    </div>
+</div>
+
+<div class="footer">K8s Troubleshooter • Azure OpenAI GPT-4.1 • AKS • FastAPI</div>
+
+<script>
+function setError(text) {
+    document.getElementById('errorInput').value = text;
+}
+
+function formatMarkdown(text) {
+    return text
+        .replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^\- (.*$)/gm, '<li>$1</li>')
+        .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n/g, '<br>');
+}
+
+async function diagnose() {
+    const error = document.getElementById('errorInput').value.trim();
+    if (!error) { alert('Please enter a Kubernetes error or issue'); return; }
+
+    const namespace = document.getElementById('namespace').value.trim() || 'default';
+    const resourceName = document.getElementById('resourceName').value.trim() || null;
+    const btn = document.getElementById('diagnoseBtn');
+    const loading = document.getElementById('loading');
+    const result = document.getElementById('result');
+
+    btn.disabled = true;
+    loading.style.display = 'block';
+    result.style.display = 'none';
+
+    try {
+        const res = await fetch('/troubleshoot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ error, namespace, resource_name: resourceName, max_tokens: 1000 })
+        });
+        const data = await res.json();
+        loading.style.display = 'none';
+        if (res.ok) {
+            document.getElementById('resultContent').innerHTML = formatMarkdown(data.diagnosis);
+            result.style.display = 'block';
+        } else {
+            document.getElementById('resultContent').innerHTML = '<p style="color:#f85149;">❌ Error: ' + (data.detail || 'Something went wrong') + '</p>';
+            result.style.display = 'block';
+        }
+    } catch (err) {
+        loading.style.display = 'none';
+        document.getElementById('resultContent').innerHTML = '<p style="color:#f85149;">❌ Connection error. Is the API running?</p>';
+        result.style.display = 'block';
+    }
+    btn.disabled = false;
+}
+
+async function scanCluster() {
+    const loading = document.getElementById('loading');
+    const scanResult = document.getElementById('scanResult');
+    loading.style.display = 'block';
+    scanResult.style.display = 'none';
+    try {
+        const res = await fetch('/scan');
+        const data = await res.json();
+        loading.style.display = 'none';
+        showScanResult(data);
+    } catch (err) {
+        loading.style.display = 'none';
+        alert('Scan failed: ' + err.message);
+    }
+}
+
+async function scanNs() {
+    const ns = document.getElementById('scanNamespace').value.trim();
+    if (!ns) { alert('Enter a namespace'); return; }
+    const loading = document.getElementById('loading');
+    const scanResult = document.getElementById('scanResult');
+    loading.style.display = 'block';
+    scanResult.style.display = 'none';
+    try {
+        const res = await fetch('/scan/' + ns);
+        const data = await res.json();
+        loading.style.display = 'none';
+        showScanResult(data);
+    } catch (err) {
+        loading.style.display = 'none';
+        alert('Scan failed: ' + err.message);
+    }
+}
+
+function showScanResult(data) {
+    const scanResult = document.getElementById('scanResult');
+    const stats = document.getElementById('scanStats');
+    const issues = document.getElementById('scanIssues');
+    const diagnosis = document.getElementById('scanDiagnosis');
+
+    const total = data.total_pods || 0;
+    const unhealthy = data.unhealthy_pods || 0;
+    const healthy = data.healthy_pods || (total - unhealthy);
+    const statusColor = unhealthy === 0 ? '#4caf50' : '#f44336';
+
+    stats.innerHTML = `
+        <div style="background:#161b22;border:1px solid #30363d;padding:16px 24px;border-radius:10px;text-align:center;min-width:120px;">
+            <div style="font-size:28px;font-weight:700;color:#58a6ff;">${total}</div>
+            <div style="font-size:12px;color:#888;">Total Pods</div>
+        </div>
+        <div style="background:#161b22;border:1px solid #30363d;padding:16px 24px;border-radius:10px;text-align:center;min-width:120px;">
+            <div style="font-size:28px;font-weight:700;color:#4caf50;">${healthy}</div>
+            <div style="font-size:12px;color:#888;">Healthy</div>
+        </div>
+        <div style="background:#161b22;border:1px solid ${statusColor};padding:16px 24px;border-radius:10px;text-align:center;min-width:120px;">
+            <div style="font-size:28px;font-weight:700;color:${statusColor};">${unhealthy}</div>
+            <div style="font-size:12px;color:#888;">Unhealthy</div>
+        </div>`;
+
+    if (data.issues && data.issues.length > 0) {
+        issues.innerHTML = '<h3 style="color:#f85149;margin:12px 0 8px;">⚠️ Issues Found:</h3>' +
+            data.issues.map(i => `
+                <div style="background:#1c1c1c;border:1px solid #f85149;border-radius:8px;padding:12px;margin:8px 0;">
+                    <strong style="color:#f85149;">${i.status}</strong> — <code>${i.pod_name}</code> in <code>${i.namespace}</code>
+                    <span style="color:#888;"> (restarts: ${i.restarts})</span>
+                    <div style="font-size:12px;color:#888;margin-top:4px;">${i.reason}</div>
+                </div>`).join('');
+    } else {
+        issues.innerHTML = '<p style="color:#4caf50;margin:12px 0;">✅ All pods are healthy! No issues detected.</p>';
+    }
+
+    diagnosis.innerHTML = data.ai_diagnosis ? formatMarkdown(data.ai_diagnosis) : '';
+    scanResult.style.display = 'block';
+}
+</script>
+</body>
+</html>
