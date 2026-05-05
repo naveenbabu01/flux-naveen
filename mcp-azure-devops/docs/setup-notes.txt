@@ -1,0 +1,37 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE 1: claude_desktop_config.json
+# ───────────────────────────────────────────────────────────────────────────────
+# Place this in:
+#   Mac:   ~/Library/Application Support/Claude/claude_desktop_config.json
+#   Linux: ~/.config/claude/claude_desktop_config.json
+#   Win:   %APPDATA%\Claude\claude_desktop_config.json
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# {
+#   "mcpServers": {
+#     "azure-devops": {
+#       "command": "python",
+#       "args": ["/absolute/path/to/mcp-azure-devops/src/server.py"],
+#       "env": {
+#         "AZURE_SUBSCRIPTION_ID": "your-sub-id",
+#         "AZURE_TENANT_ID":       "your-tenant-id",
+#         "AZURE_CLIENT_ID":       "your-client-id",
+#         "AZURE_CLIENT_SECRET":   "your-secret",
+#         "AKS_RESOURCE_GROUP":    "your-rg",
+#         "AKS_CLUSTER_NAME":      "your-cluster",
+#         "GITHUB_TOKEN":          "ghp_xxx",
+#         "JIRA_URL":              "https://yourco.atlassian.net",
+#         "JIRA_EMAIL":            "you@yourco.com",
+#         "JIRA_API_TOKEN":        "your-jira-token"
+#       }
+#     }
+#   }
+# }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FILE 2: .github/workflows/mcp-integration-test.yml
+# ───────────────────────────────────────────────────────────────────────────────
+# This workflow runs every time you push, to verify the MCP server imports
+# and responds correctly before deploying.
+# ═══════════════════════════════════════════════════════════════════════════════
