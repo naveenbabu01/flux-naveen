@@ -65,4 +65,7 @@ jobs:
             -e AZURE_CLIENT_ID=mock \
             -e AZURE_CLIENT_SECRET=mock \
             -e GITHUB_TOKEN=mock \
-            mcp-azure-devops:test python -c "from src.server import server; print('MCP server imports OK')"
+            -e JIRA_URL=https://mock.atlassian.net \
+            -e JIRA_EMAIL=test@test.com \
+            -e JIRA_API_TOKEN=mock \
+            mcp-azure-devops:test python -c "import sys; sys.path.insert(0,'/app/src'); from server import server; print('MCP server imports OK')"

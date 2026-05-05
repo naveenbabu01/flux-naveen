@@ -17,6 +17,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy source
 COPY src/ ./src/
 
+# Ensure Python can find modules in src/
+ENV PYTHONPATH=/app/src
+
 # Non-root user for security
 RUN useradd -m mcpuser
 USER mcpuser
