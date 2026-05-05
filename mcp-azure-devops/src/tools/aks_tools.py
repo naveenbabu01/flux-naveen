@@ -5,7 +5,6 @@ All AKS (Azure Kubernetes Service) operations.
 Uses the official Kubernetes Python client + Azure Identity for authentication.
 """
 
-import json
 from datetime import datetime, timezone
 from kubernetes import client as k8s_client, config as k8s_config
 from azure.identity import ClientSecretCredential
@@ -48,7 +47,8 @@ class AKSTools:
                 resource_group_name=self.cfg.aks_resource_group,
                 resource_name=self.cfg.aks_cluster_name,
             )
-            import tempfile, base64, os
+            import tempfile
+            import os
             kubeconfig_data = creds.kubeconfigs[0].value
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".yaml")
             tmp.write(kubeconfig_data)

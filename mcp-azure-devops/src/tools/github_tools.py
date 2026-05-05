@@ -4,7 +4,6 @@ tools/github_tools.py
 GitHub Actions workflow operations via GitHub REST API v2022-11-28.
 """
 
-import json
 import httpx
 from utils.config import Config
 from utils.logger import setup_logger

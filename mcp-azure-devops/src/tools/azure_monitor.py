@@ -5,7 +5,6 @@ Azure Monitor alerts + Application Insights query tools.
 """
 
 import httpx
-from datetime import datetime, timedelta, timezone
 from azure.identity import ClientSecretCredential
 from azure.mgmt.monitor import MonitorManagementClient
 from utils.config import Config
