@@ -1,0 +1,10 @@
+{
+  "mcp": {
+    "servers": {
+      "k8s-ops-agent": {
+        "type": "sse",
+        "url": "http://20.81.99.125:8080/sse"
+      }
+    }
+  }
+}

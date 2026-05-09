@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-k8s-ops-agent
+  labels:
+    app: k8s-ops-agent
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: k8s-ops-agent
+  template:
+    metadata:
+      labels:
+        app: k8s-ops-agent
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+        - name: k8s-ops-agent
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8501
+          env:
+            - name: AZURE_OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: azure-openai-api-key
+            - name: AZURE_OPENAI_ENDPOINT
+              value: {{ .Values.env.AZURE_OPENAI_ENDPOINT | quote }}
+            - name: AZURE_OPENAI_DEPLOYMENT
+              value: {{ .Values.env.AZURE_OPENAI_DEPLOYMENT | quote }}
+            - name: AZURE_OPENAI_EMBED_DEPLOYMENT
+              value: {{ .Values.env.AZURE_OPENAI_EMBED_DEPLOYMENT | quote }}
+            - name: LANGCHAIN_TRACING_V2
+              value: {{ .Values.env.LANGCHAIN_TRACING_V2 | quote }}
+            - name: LANGCHAIN_PROJECT
+              value: {{ .Values.env.LANGCHAIN_PROJECT | quote }}
+            - name: LANGCHAIN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: langchain-api-key
+          livenessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /_stcore/health
+              port: 8501
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1"

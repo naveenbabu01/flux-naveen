@@ -1,0 +1,42 @@
+replicaCount: 1
+
+image:
+  repository: pythonacrtest.azurecr.io/k8s-ops-agent
+  tag: v1
+  pullPolicy: Always
+
+service:
+  type: LoadBalancer
+  port: 8501
+
+# Non-secret env vars (secrets go in secrets.yaml via --set)
+env:
+  AZURE_OPENAI_ENDPOINT: "https://test-ai-poc-nav.openai.azure.com/"
+  AZURE_OPENAI_DEPLOYMENT: "gpt-4.1"
+  AZURE_OPENAI_EMBED_DEPLOYMENT: "text-embedding-ada-002"
+  LANGCHAIN_TRACING_V2: "true"
+  LANGCHAIN_PROJECT: "k8s-ops-agent"
+
+# Secrets — pass via: helm install --set secrets.azureOpenaiApiKey=xxx
+secrets:
+  azureOpenaiApiKey: ""
+  langchainApiKey: ""
+
+serviceAccount:
+  create: true
+  name: k8s-ops-agent
+
+rbac:
+  create: true
+
+# MCP Server (separate pod)
+mcp:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: pythonacrtest.azurecr.io/k8s-ops-mcp
+    tag: v6
+    pullPolicy: Always
+  service:
+    type: LoadBalancer
+    port: 8080

@@ -1,0 +1,62 @@
+{{- if .Values.mcp.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-mcp-server
+  labels:
+    app: k8s-ops-mcp
+spec:
+  replicas: {{ .Values.mcp.replicaCount }}
+  selector:
+    matchLabels:
+      app: k8s-ops-mcp
+  template:
+    metadata:
+      labels:
+        app: k8s-ops-mcp
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+        - name: mcp-server
+          image: "{{ .Values.mcp.image.repository }}:{{ .Values.mcp.image.tag }}"
+          imagePullPolicy: {{ .Values.mcp.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: AZURE_OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: azure-openai-api-key
+            - name: AZURE_OPENAI_ENDPOINT
+              value: {{ .Values.env.AZURE_OPENAI_ENDPOINT | quote }}
+            - name: AZURE_OPENAI_DEPLOYMENT
+              value: {{ .Values.env.AZURE_OPENAI_DEPLOYMENT | quote }}
+            - name: LANGCHAIN_TRACING_V2
+              value: {{ .Values.env.LANGCHAIN_TRACING_V2 | quote }}
+            - name: LANGCHAIN_PROJECT
+              value: "k8s-ops-mcp"
+            - name: LANGCHAIN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: langchain-api-key
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+{{- end }}
