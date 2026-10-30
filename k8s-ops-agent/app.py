@@ -572,9 +572,16 @@ def _send_slack(message: str):
 # ─── 6. ROUTER FUNCTIONS ─────────────────────────────────────
 
 
-def approval_router(state: K8sAgentState) -> Literal["execute", "skip"]:
+def approval_router(state: K8sAgentState) -> Literal["execute", "skip", "__end__"]:
     status = state.get("approval_status", "pending")
-    return "execute" if status == "approved" else "skip"
+    if status == "approved":
+        return "execute"
+    if status == "rejected":
+        return "skip"
+    # Still pending: end the run and wait for the operator. The Streamlit
+    # buttons drive execute/skip directly once the operator decides, so skip
+    # and report must not run before that decision.
+    return END
 
 
 # ─── 7. BUILD LANGGRAPH ───────────────────────────────────────
@@ -603,7 +610,7 @@ graph.add_edge("diagnose", "propose")
 graph.add_conditional_edges(
     "propose",
     approval_router,
-    {"execute": "execute", "skip": "skip"},
+    {"execute": "execute", "skip": "skip", END: END},
 )
 graph.add_edge("execute", "report")
 graph.add_edge("skip", "report")
